@@ -1,10 +1,8 @@
 import {
-    cleanupFolder,
+    cleanupFolder, createRunner,
     ensureFolder,
-    getBrowser,
     getFilePath,
     getScreenshotFolder,
-    runAuth,
     takeScreenshot,
 } from './utils';
 import logSymbols from 'log-symbols';
@@ -39,41 +37,28 @@ const compareImages = async (fileA, fileB, url, cwd, maxPixelDiff = MAX_PIXEL_DI
     };
 }
 
-const compareWithNewScreenshot = (page, folder, cwd, maxPixelDiff) => async (url) => {
-    const spinner = ora(`Comparing ${ url }`).start();
-
+const compareWithNewScreenshot = async (url, page, folder, cwd, maxPixelDiff) => {
     const newScreenshot = await takeScreenshot(page, folder, true)(url);
     const originalImage = path.join(getScreenshotFolder('original', cwd), getFilePath(url));
     const { isEqual, image, diff } = await compareImages(newScreenshot, originalImage, url, cwd, maxPixelDiff);
 
-    spinner.stop();
-    console.log(isEqual ? logSymbols.success : logSymbols.error, url, image, diff);
-
     if (isEqual) {
         fs.unlinkSync(newScreenshot);
     }
+
+    return { isEqual, image, diff };
 }
 
-const createRunner = (browser, cwd, maxPixelDiff) => async ({ urls, auth }) => {
-    if (auth) {
-        const page = await browser.newPage();
-        await runAuth(page, auth);
-    }
-
+const compareRunner = (cwd, maxPixelDiff) => (browser) => async (url) => {
+    const spinner = ora(`Compare ${ url }`).start();
     const dir = getScreenshotFolder('compare', cwd);
     const page = await browser.newPage();
-    const screenshotRunner = compareWithNewScreenshot(page, dir, cwd, maxPixelDiff);
-    for (let i = 0; i < urls.length; i++) {
-        await screenshotRunner(urls[i]);
-    }
-    cleanupFolder(dir);
+    const { isEqual, image, diff } = await compareWithNewScreenshot(url, page, dir, cwd, maxPixelDiff);
+    await cleanupFolder(dir);
+    await spinner.stop();
+    console.log(isEqual ? logSymbols.success : logSymbols.error, url, image, diff);
 }
 
 export async function compare(pages, cwd, maxPixelDiff = MAX_PIXEL_DIFF) {
-    const browser = await getBrowser();
-    const runner = createRunner(browser, cwd, maxPixelDiff);
-    for (let i = 0; i < pages.length; i++) {
-        await runner(pages[i]);
-    }
-    await browser.close();
+    await createRunner(compareRunner(cwd, maxPixelDiff), pages);
 }

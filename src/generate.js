@@ -2,49 +2,22 @@ import logSymbols from 'log-symbols';
 import ora from 'ora';
 import path from 'path';
 
-import { cleanupFolder, getBrowser, getScreenshotFolder, runAuth, takeScreenshot } from './utils';
+import { cleanupFolder, createRunner, getScreenshotFolder, takeScreenshot } from './utils';
 
-const createRunner = (browser, cwd) => async ({ urls, auth }) => {
-    if (auth) {
-        const page = await browser.newPage();
-        await runAuth(page, auth);
-        console.log(logSymbols.success, 'Auth completed!');
-    }
-
-    const screenshots = [];
+const generateRunner = (cwd) => (browser) => async (url) => {
+    const spinner = ora(`Capturing ${ url }`).start();
     const page = await browser.newPage();
     const screenshotRunner = takeScreenshot(page, getScreenshotFolder('original', cwd));
-
-
-    for (let i = 0; i < urls.length; i++) {
-        const url = urls[i];
-        const spinner = ora(`${ i }/${ urls.length } Capturing ${ url }`).start();
-        const file = await screenshotRunner(url);
-        spinner.stop();
-        console.log(!!file ? logSymbols.success : logSymbols.warning, url);
-        if (file) {
-            screenshots.push(file);
-        }
-    }
-    return screenshots;
+    const files = screenshotRunner(url);
+    spinner.stop();
+    return files;
 }
 
 export async function generate(pages, cwd, cleanup) {
-    const browser = await getBrowser();
-    const runner = createRunner(browser, cwd);
-
     if (cleanup) {
         cleanupFolder(path.join(cwd, 'screenshots'));
     }
 
-    const createdScreens = [];
-
-    for (let i = 0; i < pages.length; i++) {
-        const files = await runner(pages[i]);
-        createdScreens.push(...files);
-    }
-
-    console.log(logSymbols.success, `Created ${ createdScreens.length } screenshots`);
-
-    await browser.close();
+    const runner = await createRunner(generateRunner(cwd), pages);
+    console.log(logSymbols.success, `Created ${ runner.flat().length } screenshots`);
 }
