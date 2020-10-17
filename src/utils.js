@@ -13,11 +13,12 @@ export const runAuth = async (page, { url, steps, submit }) => {
     await page.click(submit);
     await page.waitForTimeout(2000);
     await page.close();
-
 }
 
-export const getScreenshotFolder = (group) => {
-    return path.join(__dirname, '../screenshots', group);
+export const cleanupFolder = (dir) => fs.promises.rmdir(dir, { recursive: true });
+
+export const getScreenshotFolder = (group, cwd) => {
+    return path.join(cwd, './screenshots', group);
 }
 
 export const getHostName = (urlString) => {
@@ -52,12 +53,12 @@ export const doesFileExist = async (file) => {
     return false
 }
 
-export const takeScreenshot = (page, storeFolder) => async (url) => {
+export const takeScreenshot = (page, storeFolder, overwrite = false) => async (url) => {
     const folder = path.join(storeFolder, getHostName(url));
     await ensureFolder(folder);
     const file = path.join(storeFolder, getFilePath(url));
 
-    if (await doesFileExist(file)) {
+    if (!overwrite && await doesFileExist(file)) {
         return null;
     }
 

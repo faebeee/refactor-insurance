@@ -1,0 +1,23 @@
+[
+    {
+        "auth": {
+            "url": "https://example.com/login",
+            "steps": [
+                {
+                    "selector": "[name='_username']",
+                    "text": "foo@bar.io"
+                },
+                {
+                    "selector": "[name='_password']",
+                    "text": "123456789"
+                }
+            ],
+            "submit": "[name='_submit']"
+        },
+        "urls": [
+            "https://example.com",
+            "https://example.com/pages",
+            "https://example.com/pages/2"
+        ]
+    }
+]

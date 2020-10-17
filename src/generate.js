@@ -1,9 +1,10 @@
 import logSymbols from 'log-symbols';
 import ora from 'ora';
+import path from 'path';
 
-import { getBrowser, getScreenshotFolder, runAuth, takeScreenshot } from './utils';
+import { cleanupFolder, getBrowser, getScreenshotFolder, runAuth, takeScreenshot } from './utils';
 
-const createRunner = (browser) => async ({ urls, auth }) => {
+const createRunner = (browser, cwd) => async ({ urls, auth }) => {
     if (auth) {
         const page = await browser.newPage();
         await runAuth(page, auth);
@@ -12,7 +13,7 @@ const createRunner = (browser) => async ({ urls, auth }) => {
 
     const screenshots = [];
     const page = await browser.newPage();
-    const screenshotRunner = takeScreenshot(page, getScreenshotFolder('original'));
+    const screenshotRunner = takeScreenshot(page, getScreenshotFolder('original', cwd));
 
 
     for (let i = 0; i < urls.length; i++) {
@@ -28,9 +29,13 @@ const createRunner = (browser) => async ({ urls, auth }) => {
     return screenshots;
 }
 
-export async function generate(pages) {
+export async function generate(pages, cwd, cleanup) {
     const browser = await getBrowser();
-    const runner = createRunner(browser);
+    const runner = createRunner(browser, cwd);
+
+    if (cleanup) {
+        cleanupFolder(path.join(cwd, 'screenshots'));
+    }
 
     const createdScreens = [];
 
