@@ -1,8 +1,7 @@
-import { getBrowser, getScreenshotFolder, runAuth, takeScreenshot } from './utils';
-
-const pages = require('../pages.json');
 import logSymbols from 'log-symbols';
 import ora from 'ora';
+
+import { getBrowser, getScreenshotFolder, runAuth, takeScreenshot } from './utils';
 
 const createRunner = (browser) => async ({ urls, auth }) => {
     if (auth) {
@@ -29,7 +28,7 @@ const createRunner = (browser) => async ({ urls, auth }) => {
     return screenshots;
 }
 
-(async () => {
+export async function generate(pages) {
     const browser = await getBrowser();
     const runner = createRunner(browser);
 
@@ -43,4 +42,4 @@ const createRunner = (browser) => async ({ urls, auth }) => {
     console.log(logSymbols.success, `Created ${ createdScreens.length } screenshots`);
 
     await browser.close();
-})();
+}

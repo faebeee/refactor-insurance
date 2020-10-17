@@ -10,7 +10,6 @@ import logSymbols from 'log-symbols';
 
 const path = require('path');
 const fs = require('fs');
-const pages = require('../pages.json');
 const PNG = require('pngjs').PNG;
 const pixelmatch = require('pixelmatch');
 const ora = require('ora');
@@ -39,7 +38,7 @@ const compareImages = async (fileA, fileB, url) => {
 }
 
 const compareWithNewScreenshot = (page, folder) => async (url) => {
-    const spinner = ora(`Comparing ${url}`).start();
+    const spinner = ora(`Comparing ${ url }`).start();
 
     const newScreenshot = await takeScreenshot(page, folder)(url);
     const originalImage = path.join(getScreenshotFolder('original'), getFilePath(url));
@@ -66,11 +65,11 @@ const createRunner = (browser) => async ({ urls, auth }) => {
     }
 }
 
-(async () => {
+export async function compare(pages) {
     const browser = await getBrowser();
     const runner = createRunner(browser);
     for (let i = 0; i < pages.length; i++) {
         await runner(pages[i]);
     }
     await browser.close();
-})();
+}

@@ -1,0 +1,33 @@
+{
+    "name": "refactor-insurance",
+    "version": "0.1.0",
+    "description": "",
+    "main": "cli.js",
+    "dependencies": {
+        "esm": "^3.2.25",
+        "looks-same": "^7.2.3",
+        "log-symbols": "^4.0.0",
+        "ora": "^5.1.0",
+        "pixelmatch": "^5.2.1",
+        "pngjs": "^5.0.0",
+        "puppeteer": "^5.3.1",
+        "yargs": "^16.1.0"
+    },
+    "devDependencies": {},
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "bin": {
+        "refactor": "./cli.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/faebeee/refactor-insurance.git"
+    },
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/faebeee/refactor-insurance/issues"
+    },
+    "homepage": "https://github.com/faebeee/refactor-insurance#readme"
+}
