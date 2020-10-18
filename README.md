@@ -5,6 +5,12 @@ can configure some urls which will be screenshotted. After you've completed your
 the screenshots you've taken before your refactor and compare them with a newly created screenshot. If the images do not 
 match, you can investigate further. 
 
+Generate:
+![Generate](./doc/generate.png)
+
+Compare:
+![Compare](./doc/compare.png)
+
 ## Install
 
     npm i -g refactor-insurance

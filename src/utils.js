@@ -106,7 +106,7 @@ export const takeScreenshot = (page, storeFolder, overwrite = false) => async (u
 
     await page.goto(url, { waitUntil: 'networkidle2' });
     await page.waitForTimeout(2000);
-    await page.screenshot({ path: file, fullPage: true });
+    await page.screenshot({ path: file, fullPage: false });
     return file;
 }
 
