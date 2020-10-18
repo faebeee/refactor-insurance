@@ -1,5 +1,6 @@
 [
     {
+        "id": "example",
         "auth": {
             "url": "https://example.com/login",
             "steps": [

@@ -1,32 +1,38 @@
 #!/usr/bin/env node
 
-
 const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
 const path = require('path');
 require = require("esm")(module)
 const { generate } = require('./src/generate');
 const { compare } = require('./src/compare');
-const { checkErrors } = require('./src/check-errors');
+const { filterById } = require('./src/utils');
+const updateNotifier = require('update-notifier');
+const pkg = require('./package.json');
+
+updateNotifier({pkg}).notify();
 
 yargs(hideBin(process.argv))
     .command('generate', 'Generate screenshots', ({ argv }) => {
         const cwd = process.cwd();
-        const pages = require(path.resolve(cwd, argv.config) || './pages.json');
+        const pages = require(path.resolve(cwd, argv.config || './pages.json'));
         const update = argv.update || false;
-        return generate(pages, argv.folder || cwd, update)
+        const id = argv.id || null;
+
+        return generate(pages.filter(filterById(id)), argv.folder || cwd, update)
     })
     .command('compare', 'Compare existing screenshots with new ones', ({ argv }) => {
         const cwd = process.cwd();
-
-        const pages = require(path.resolve(cwd, argv.config) || './pages.json');
+        const pages = require(path.resolve(cwd, argv.config || './pages.json'));
         const threshold = argv.threshold || undefined;
-        return compare(pages, argv.folder || cwd, threshold);
+        const id = argv.id || null;
+
+        return compare(pages.filter(filterById(id)), argv.folder || cwd, threshold);
     })
-    .command('check-errors', 'Check of any pages report some errors to the console', ({ argv }) => {
-        const cwd = process.cwd();
-        const pages = require(path.resolve(cwd, argv.config) || './pages.json');
-        return checkErrors(pages);
+    .option('id', {
+        alias: 'i',
+        type: 'string',
+        description: 'The ID of a single config item',
     })
     .option('threshold', {
         alias: 't',

@@ -1,23 +1,28 @@
 import logSymbols from 'log-symbols';
-import ora from 'ora';
 import path from 'path';
 
 import { cleanupFolder, createRunner, getScreenshotFolder, takeScreenshot } from './utils';
 
 const generateRunner = (cwd) => (browser) => async (url) => {
-    const spinner = ora(`Capturing ${ url }`).start();
     const page = await browser.newPage();
     const screenshotRunner = takeScreenshot(page, getScreenshotFolder('original', cwd));
-    const files = screenshotRunner(url);
-    spinner.stop();
-    return files;
+    const file = await screenshotRunner(url);
+
+    return {
+        file,
+        url,
+    }
+}
+
+const printer = (id, results) => {
+    console.log(logSymbols.success, `Created ${ results.length } screenshots for ${ id }`);
 }
 
 export async function generate(pages, cwd, cleanup) {
     if (cleanup) {
+        console.log(logSymbols.warning, `Cleanup screenshot folder before generating new ones`);
         cleanupFolder(path.join(cwd, 'screenshots'));
     }
 
-    const runner = await createRunner(generateRunner(cwd), pages);
-    console.log(logSymbols.success, `Created ${ runner.flat().length } screenshots`);
+    return createRunner('Generate Screenshots', generateRunner(cwd), pages, printer);
 }
