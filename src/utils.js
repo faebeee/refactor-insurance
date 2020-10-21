@@ -16,20 +16,27 @@ export const compareImages = async (fileA, fileB, url, cwd, maxPixelDiff = MAX_P
     const { width, height } = img1;
     const diff = new PNG({ width, height });
 
-    const pixels = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.2 });
-    const diffFolder = getScreenshotFolder('diff', cwd);
-    const diffFile = path.join(diffFolder, getFilePath(url));
+    try {
+        const pixels = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.2 });
+        const diffFolder = getScreenshotFolder('diff', cwd);
+        const diffFile = path.join(diffFolder, getFilePath(url));
 
-    if (pixels > maxPixelDiff) {
-        await ensureFolder(path.dirname(diffFile));
-        fs.writeFileSync(diffFile, PNG.sync.write(diff));
+        if (pixels > maxPixelDiff) {
+            await ensureFolder(path.dirname(diffFile));
+            fs.writeFileSync(diffFile, PNG.sync.write(diff));
+        }
+
+        return {
+            isEqual: pixels <= maxPixelDiff,
+            diff: pixels,
+            image: diffFile,
+        };
+    }catch(e){
+        console.log();
+        console.log(fileA);
+        console.log(fileB);
+        throw e;
     }
-
-    return {
-        isEqual: pixels <= maxPixelDiff,
-        diff: pixels,
-        image: diffFile,
-    };
 }
 
 export const compareWithNewScreenshot = async (url, page, folder, cwd, maxPixelDiff) => {
@@ -125,7 +132,7 @@ const createUrlRunner = (workTitle, runner) => async (urls) => {
         for (let x = 0; x < urls.length; x++) {
             const url = urls[x];
             bar.tick({ url });
-            results.push(await runner(url));
+            results.push(await runner(url, bar));
         }
     } catch (e) {
         bar.terminate();

@@ -3,7 +3,7 @@ import path from 'path';
 
 import { cleanupFolder, createRunner, getScreenshotFolder, takeScreenshot } from './utils';
 
-const generateRunner = (cwd) => (browser) => async (url) => {
+const generateRunner = (cwd) => (browser) => async (url, bar) => {
     const page = await browser.newPage();
     const screenshotRunner = takeScreenshot(page, getScreenshotFolder('original', cwd));
     const file = await screenshotRunner(url);
