@@ -145,7 +145,7 @@ const createUrlRunner = (workTitle, runner, progressPrinter = () => {}) => async
             bar.interrupt(`${ e.message } - ${ url }`);
         }
     }
-    bar.clear();
+    bar.terminate();
     return results;
 }
 
