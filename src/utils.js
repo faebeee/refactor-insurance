@@ -31,8 +31,7 @@ export const compareImages = async (fileA, fileB, url, cwd, maxPixelDiff = MAX_P
             diff: pixels,
             image: diffFile,
         };
-    }catch(e){
-        console.log();
+    } catch (e) {
         console.log(fileA);
         console.log(fileB);
         throw e;
@@ -75,9 +74,9 @@ export const getHostName = (urlString) => {
 }
 
 export const generateFileName = (urlString) => {
-    const { host, pathname } = new URL(urlString);
+    const { host, pathname, search } = new URL(urlString);
     const fileName = pathname.replace(/\//g, '_');
-    return `${ host }_${ fileName }.png`;
+    return `${ host }_${ fileName }${search}.png`;
 }
 
 export const getFilePath = (url) => path.join(getHostName(url), generateFileName(url));
@@ -117,7 +116,14 @@ export const takeScreenshot = (page, storeFolder, overwrite = false) => async (u
     return file;
 }
 
-const createUrlRunner = (workTitle, runner) => async (urls) => {
+const createUrlInterpolator = (map) => (url) => {
+    return Object.entries(map).reduce((acc, [key, value]) => {
+        acc = acc.replace(`%${ key }%`, value);
+        return acc;
+    }, url)
+}
+
+const createUrlRunner = (workTitle, runner, progressPrinter = () => {}) => async (urls) => {
     const bar = new ProgressBar(`${ figures.play } ${ workTitle } [:bar] :current/:total | Progress :percent | ETA :etas | Elapsed :elapsed`, {
         complete: figures.nodejs,
         incomplete: ' ',
@@ -128,26 +134,28 @@ const createUrlRunner = (workTitle, runner) => async (urls) => {
 
     const results = [];
 
-    try {
-        for (let x = 0; x < urls.length; x++) {
-            const url = urls[x];
-            bar.tick({ url });
-            results.push(await runner(url, bar));
+    for (let x = 0; x < urls.length; x++) {
+        const url = urls[x];
+        bar.tick({ url });
+        try {
+            const result = await runner(url, bar);
+            progressPrinter(bar, result)
+            results.push(result);
+        } catch (e) {
+            bar.interrupt(`${ e.message } - ${ url }`);
         }
-    } catch (e) {
-        bar.terminate();
-        throw e;
     }
+    bar.clear();
     return results;
 }
 
-export const createRunner = async (workTitle, runnerFactory, pages, printer) => {
+export const createRunner = async (workTitle, runnerFactory, pages, printer, progressPrinter) => {
     const browser = await getBrowser();
-    const runner = createUrlRunner(workTitle, runnerFactory(browser));
+    const runner = createUrlRunner(workTitle, runnerFactory(browser), progressPrinter);
 
     for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
-        console.log(figures.pointer, page.id);
+        console.log(figures.pointer, `Page ${ page.id }`);
 
         try {
             if (page.auth) {
@@ -156,7 +164,13 @@ export const createRunner = async (workTitle, runnerFactory, pages, printer) => 
             }
 
             const { urls } = page;
-            printer(page.id, await runner(urls));
+            const interpolator = createUrlInterpolator({
+                base_url: page.base_url,
+            });
+            const interpolatedUrls = urls.map((url) => {
+                return interpolator(url)
+            })
+            printer(page.id, await runner(interpolatedUrls));
         } catch (e) {
             console.error(logSymbols.error, e);
         }

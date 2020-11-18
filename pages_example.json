@@ -1,8 +1,9 @@
 [
     {
         "id": "example",
+        "base_url": "https://example.io",
         "auth": {
-            "url": "https://example.com/login",
+            "url": "https://example.io/login",
             "steps": [
                 {
                     "selector": "[name='_username']",
@@ -17,8 +18,8 @@
         },
         "urls": [
             "https://example.com",
-            "https://example.com/pages",
-            "https://example.com/pages/2"
+            "%base_url%/pages",
+            "%base_url%/pages/2"
         ]
     }
 ]

@@ -12,7 +12,7 @@ const compareRunner = (cwd, maxPixelDiff) => (browser) => async (url, bar) => {
     try {
         const { isEqual, image, diff } = await compareWithNewScreenshot(url, page, dir, cwd, maxPixelDiff);
         await cleanupFolder(dir);
-
+        await page.close();
         return {
             isEqual,
             url,
@@ -20,24 +20,24 @@ const compareRunner = (cwd, maxPixelDiff) => (browser) => async (url, bar) => {
             diff,
         };
     } catch (e) {
+        await page.close();
         throw e;
     }
-    return null;
 }
 
 const printer = (id, results) => {
-    results.forEach(result => {
-        if (result.isEqual) {
-            console.log(logSymbols.success, result.url);
-        } else {
-            console.error(logSymbols.error, `${ result.diff } pixels`, result.image);
-        }
-    })
+
+}
+
+const progressPrinter = (bar, result) => {
+    if (!result.isEqual) {
+        bar.interrupt(`${ logSymbols.error } ${ result.url }`);
+    }
 }
 
 export async function compare(pages, cwd, maxPixelDiff = MAX_PIXEL_DIFF) {
     await cleanupFolder(getScreenshotFolder('compare', cwd))
     await cleanupFolder(getScreenshotFolder('diff', cwd))
 
-    await createRunner(`Compare screenshots`, compareRunner(cwd, maxPixelDiff), pages, printer);
+    await createRunner(`Compare screenshots`, compareRunner(cwd, maxPixelDiff), pages, printer, progressPrinter);
 }
