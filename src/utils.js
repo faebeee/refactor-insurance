@@ -4,11 +4,18 @@ import fs from 'fs';
 import puppeteer from 'puppeteer';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
-import ProgressBar from 'progress';
-
-const figures = require('figures');
 
 export const filterById = (_id) => ({ id }) => _id ? id === _id : true;
+
+export const hashString = (input) => {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+        const char = input.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return String(hash);
+}
 
 export const compareImages = async (fileA, fileB, url, cwd, maxPixelDiff = MAX_PIXEL_DIFF) => {
     const img1 = PNG.sync.read(fs.readFileSync(fileA));
@@ -38,9 +45,9 @@ export const compareImages = async (fileA, fileB, url, cwd, maxPixelDiff = MAX_P
     }
 }
 
-export const compareWithNewScreenshot = async (url, page, folder, cwd, maxPixelDiff) => {
-    const newScreenshot = await takeScreenshot(page, folder, true)(url);
-    const originalImage = path.join(getScreenshotFolder('original', cwd), getFilePath(url));
+export const compareWithNewScreenshot = async (groupId, url, page, folder, cwd, maxPixelDiff) => {
+    const newScreenshot = await takeScreenshot(page, folder, true)(groupId, url);
+    const originalImage = path.join(getScreenshotFolder('original', cwd), groupId, generateFileName(url));
     const { isEqual, image, diff } = await compareImages(newScreenshot, originalImage, url, cwd, maxPixelDiff);
 
     if (isEqual) {
@@ -76,7 +83,7 @@ export const getHostName = (urlString) => {
 export const generateFileName = (urlString) => {
     const { host, pathname, search } = new URL(urlString);
     const fileName = pathname.replace(/\//g, '_');
-    return `${ host }_${ fileName }${search}.png`;
+    return `${ host }_${ fileName }${ search }.png`;
 }
 
 export const getFilePath = (url) => path.join(getHostName(url), generateFileName(url));
@@ -87,13 +94,12 @@ export const getBrowser = () => puppeteer.launch({
     headless: true,
     devtools: false,
     dumpio: false,
-    defaultViewport: { width: 1440, height: 800 },
+    defaultViewport: { width: 1600, height: 1200 },
 });
 
 export const doesFileExist = async (file) => {
     try {
         const fileAlreadyExists = await fs.promises.stat(file);
-
         return !!fileAlreadyExists;
     } catch {
 
@@ -101,10 +107,10 @@ export const doesFileExist = async (file) => {
     return false
 }
 
-export const takeScreenshot = (page, storeFolder, overwrite = false) => async (url) => {
-    const folder = path.join(storeFolder, getHostName(url));
+export const takeScreenshot = (page, storeFolder, overwrite = false) => async (groupId, url) => {
+    const folder = path.join(storeFolder, groupId);
     await ensureFolder(folder);
-    const file = path.join(storeFolder, getFilePath(url));
+    const file = path.join(storeFolder, groupId, generateFileName(url));
 
     if (!overwrite && await doesFileExist(file)) {
         return null;
@@ -123,54 +129,49 @@ const createUrlInterpolator = (map) => (url) => {
     }, url)
 }
 
-const createUrlRunner = (workTitle, runner, progressPrinter = () => {}) => async (urls) => {
-    const bar = new ProgressBar(`${ figures.play } ${ workTitle } [:bar] :current/:total | Progress :percent | ETA :etas | Elapsed :elapsed`, {
-        complete: figures.nodejs,
-        incomplete: ' ',
-        width: 20,
-        total: urls.length,
-        // clear: true,
-    });
-
+const createUrlRunner = (runner, progressPrinter, errorPrinter) => async (groupId, urls) => {
     const results = [];
 
     for (let x = 0; x < urls.length; x++) {
         const url = urls[x];
-        bar.tick({ url });
         try {
-            const result = await runner(url, bar);
-            progressPrinter(bar, result)
+            const result = await runner(groupId, url);
+            progressPrinter(groupId, url, result)
             results.push(result);
         } catch (e) {
-            bar.interrupt(`${ e.message } - ${ url }`);
+            errorPrinter(e, url);
         }
     }
-    bar.terminate();
     return results;
 }
 
-export const createRunner = async (workTitle, runnerFactory, pages, printer, progressPrinter) => {
+export const getInterpolatedUrls = (page) => {
+    const interpolator = createUrlInterpolator({
+        base_url: page.base_url,
+    });
+    return page.urls.map((url) => {
+        return interpolator(url)
+    })
+}
+
+export const createRunner = async (runnerFactory, pages, printer, progressPrinter = () => {}, errorPrinter = () => {}) => {
     const browser = await getBrowser();
-    const runner = createUrlRunner(workTitle, runnerFactory(browser), progressPrinter);
+    const runner = createUrlRunner(runnerFactory(browser), progressPrinter, errorPrinter);
 
     for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
-        console.log(figures.pointer, `Page ${ page.id }`);
-
         try {
+            if (page.urls.length <= 0) {
+                console.log(`Skipping ${ page.id }`);
+                continue;
+            }
             if (page.auth) {
                 const browserPage = await browser.newPage();
                 await runAuth(browserPage, page);
             }
 
-            const { urls } = page;
-            const interpolator = createUrlInterpolator({
-                base_url: page.base_url,
-            });
-            const interpolatedUrls = urls.map((url) => {
-                return interpolator(url)
-            })
-            printer(page.id, await runner(interpolatedUrls));
+            const { id } = page;
+            printer(page.id, await runner(id, page.urls));
         } catch (e) {
             console.error(logSymbols.error, e);
         }
