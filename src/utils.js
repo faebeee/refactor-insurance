@@ -107,6 +107,22 @@ export const doesFileExist = async (file) => {
     return false
 }
 
+
+export const processPages = (pages, id, hash) => {
+    return pages
+        .filter(filterById(id))
+        .map(page => ({
+            ...page,
+            urls: getInterpolatedUrls(page),
+        }))
+        .map((page) => ({
+            ...page,
+            urls: page.urls.filter((url) => {
+                return (hash ? hash.includes(hashString(url)) : true)
+            }),
+        }));
+}
+
 export const takeScreenshot = (page, storeFolder, overwrite = false) => async (groupId, url) => {
     const folder = path.join(storeFolder, groupId);
     await ensureFolder(folder);
@@ -136,7 +152,7 @@ const createUrlRunner = (runner, progressPrinter, errorPrinter) => async (groupI
         const url = urls[x];
         try {
             const result = await runner(groupId, url);
-            progressPrinter(groupId, url, result)
+            progressPrinter(groupId, url, result, x, urls.length)
             results.push(result);
         } catch (e) {
             errorPrinter(e, url);

@@ -15,20 +15,6 @@ updateNotifier({ pkg }).notify();
 
 const argv = yargs(process.argv.slice(2))
 
-const processPages = (pages, id, hash) => {
-    return pages
-        .filter(filterById(id))
-        .map(page => ({
-            ...page,
-            urls: getInterpolatedUrls(page),
-        }))
-        .map((page) => ({
-            ...page,
-            urls: page.urls.filter((url) => {
-                return (hash ? hash.includes(hashString(url)) : true)
-            }),
-        }));
-}
 
 argv
     .command({
